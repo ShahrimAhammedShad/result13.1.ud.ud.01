@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ideal Coaching Centre | Result Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Result Portal</p>
+          <h1>Ideal Coaching Centre</h1>
+        </div>
+        <span id="modeBadge" class="mode-badge">Local demo mode</span>
+      </header>
+
+      <main>
+        <section class="student-portal" id="studentView">
+          <form class="search-panel" id="searchForm">
+            <p class="eyebrow">Student result search</p>
+            <h2>Find Result</h2>
+            <label for="studentRoll">Roll Number</label>
+            <div class="inline-form">
+              <input id="studentRoll" name="studentRoll" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="123456" required />
+              <button type="submit">Search</button>
+            </div>
+            <p class="form-hint">Roll number must be exactly 6 digits.</p>
+          </form>
+
+          <div class="hero-copy">
+            <p class="eyebrow">Ideal Coaching Centre</p>
+            <h2>Latest result first, full progress below.</h2>
+            <p>Students can search by roll number to see GPA, merit position, exam history, and overall performance.</p>
+          </div>
+
+          <section class="result-area hidden" id="resultArea" aria-live="polite">
+            <article class="latest-card" id="latestResultCard"></article>
+            <article class="summary-card" id="overallCard"></article>
+            <article class="history-card">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Exam history</p>
+                  <h3>All Published Results</h3>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Exam</th>
+                      <th>Date</th>
+                      <th>Marks</th>
+                      <th>GPA</th>
+                      <th>Merit</th>
+                    </tr>
+                  </thead>
+                  <tbody id="studentHistoryBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        </section>
+
+        <section class="admin-area hidden" id="adminView">
+          <div class="admin-login" id="loginPanel">
+            <div>
+              <p class="eyebrow">Secured admin access</p>
+              <h2>Manage students, exams, and results.</h2>
+              <p>This panel is opened only through the protected roll shortcut. Sign in to publish result data to Firebase.</p>
+            </div>
+            <form id="loginForm" class="login-form" autocomplete="off">
+              <label for="adminEmail">Email</label>
+              <input id="adminEmail" type="email" autocomplete="off" required />
+              <label for="adminPassword">Password</label>
+              <input id="adminPassword" type="password" autocomplete="new-password" required />
+              <button type="submit">Login</button>
+              <button class="ghost-btn" type="button" id="backToSearchBtn">Back to Search</button>
+            </form>
+          </div>
+
+          <div class="dashboard hidden" id="dashboard">
+            <div class="dashboard-head">
+              <div>
+                <p class="eyebrow">Admin dashboard</p>
+                <h2>Result Management</h2>
+              </div>
+              <div class="head-actions">
+                <button class="ghost-btn" type="button" id="exportBtn">Export CSV</button>
+                <button class="ghost-btn" type="button" id="logoutBtn">Logout</button>
+              </div>
+            </div>
+
+            <section class="stat-grid" id="adminOverview"></section>
+
+            <div class="quick-actions" role="group" aria-label="Admin actions">
+              <button class="action-tab active" type="button" data-panel="resultPanel">Input Result</button>
+              <button class="action-tab" type="button" data-panel="studentPanel">Add Student</button>
+              <button class="action-tab" type="button" data-panel="examPanel">Create Exam</button>
+            </div>
+
+            <div class="admin-grid">
+              <form id="studentForm" class="panel-form admin-panel hidden" data-admin-panel="studentPanel">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Student registry</p>
+                    <h3>Add or Update Student</h3>
+                  </div>
+                </div>
+                <label>
+                  Roll Number
+                  <input id="studentAdminRoll" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="123456" required />
+                </label>
+                <label>
+                  Student Name
+                  <input id="studentAdminName" type="text" placeholder="Student name" required />
+                </label>
+                <label>
+                  Batch
+                  <input id="studentAdminBatch" type="text" placeholder="Class 9 - Batch A" required />
+                </label>
+                <button type="submit">Save Student</button>
+                <div class="table-wrap compact-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Roll</th>
+                        <th>Name</th>
+                        <th>Batch</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="studentsBody"></tbody>
+                  </table>
+                </div>
+              </form>
+
+              <form id="examForm" class="panel-form admin-panel hidden" data-admin-panel="examPanel">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Exam setup</p>
+                    <h3>Create Exam</h3>
+                  </div>
+                </div>
+                <label>
+                  Exam Name
+                  <input id="examName" type="text" placeholder="Monthly Test 01" required />
+                </label>
+                <label>
+                  Exam Date
+                  <input id="examDate" type="date" required />
+                </label>
+                <label>
+                  Full Marks
+                  <input id="fullMarks" type="number" min="1" value="100" required />
+                </label>
+                <label class="toggle-line">
+                  <input id="examPublished" type="checkbox" checked />
+                  Publish to student portal
+                </label>
+                <button type="submit">Save Exam</button>
+                <div class="table-wrap compact-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Exam</th>
+                        <th>Date</th>
+                        <th>Full Marks</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="examsBody"></tbody>
+                  </table>
+                </div>
+              </form>
+
+              <form id="resultForm" class="panel-form wide-form admin-panel" data-admin-panel="resultPanel">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Result entry</p>
+                    <h3>Input Result</h3>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Exam
+                    <select id="resultExam" required></select>
+                  </label>
+                  <label>
+                    Roll Number
+                    <input id="resultRoll" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="123456" required />
+                  </label>
+                  <label>
+                    Student Name
+                    <input id="resultStudentName" type="text" placeholder="Name appears automatically" readonly />
+                  </label>
+                  <label>
+                    Obtained Marks
+                    <input id="obtainedMarks" type="number" min="0" value="0" required />
+                  </label>
+                  <label>
+                    Status
+                    <select id="resultStatus">
+                      <option value="regular">Regular</option>
+                      <option value="expelled">Expelled</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="computed-strip" id="computedPreview">Select an exam and enter marks to preview GPA and merit.</div>
+                <button type="submit">Save Result</button>
+              </form>
+            </div>
+
+            <div class="table-tools">
+              <input id="adminFilter" type="search" placeholder="Search roll, name, exam, batch..." />
+              <select id="examFilter"></select>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Roll</th>
+                    <th>Name</th>
+                    <th>Batch</th>
+                    <th>Exam</th>
+                    <th>Marks</th>
+                    <th>GPA</th>
+                    <th>Merit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
