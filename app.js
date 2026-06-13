@@ -1022,8 +1022,13 @@ function createExamId(name, date) {
 }
 
 function percentageToGpa(percentage) {
-  if (percentage < 33) return 0;
-  return Math.min(5, percentage / 20);
+  if (percentage >= 80) return 5;
+  if (percentage >= 70) return 4;
+  if (percentage >= 60) return 3.5;
+  if (percentage >= 50) return 3;
+  if (percentage >= 40) return 2;
+  if (percentage >= 33) return 1;
+  return 0;
 }
 
 function percentageToGrade(percentage) {
