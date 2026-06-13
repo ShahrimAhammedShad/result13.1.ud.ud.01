@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -124,6 +125,11 @@
                   <input id="studentAdminBatch" type="text" placeholder="Class 9 - Batch A" required />
                 </label>
                 <button type="submit">Save Student</button>
+                <div class="bulk-upload-box">
+                  <label for="studentExcelFile">Bulk Upload From Excel</label>
+                  <input id="studentExcelFile" type="file" accept=".xlsx,.xls,.csv" />
+                  <p class="form-hint">Columns: Roll, Name, Batch. Duplicate rolls will open a selection box.</p>
+                </div>
                 <div class="table-wrap compact-table">
                   <table>
                     <thead>
@@ -241,6 +247,22 @@
           </div>
         </section>
       </main>
+    </div>
+
+    <div class="modal-backdrop hidden" id="duplicateModal">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="duplicateTitle">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Duplicate roll found</p>
+            <h3 id="duplicateTitle">Choose Which Student Information To Keep</h3>
+          </div>
+        </div>
+        <form id="duplicateForm" class="duplicate-form"></form>
+        <div class="modal-actions">
+          <button class="ghost-btn" type="button" id="cancelDuplicateBtn">Cancel</button>
+          <button class="primary-btn" type="button" id="confirmDuplicateBtn">Import Selected</button>
+        </div>
+      </div>
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -366,6 +366,15 @@ button[type="submit"]:hover,
   background: #f7faf8;
 }
 
+.bulk-upload-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #f7faf8;
+}
+
 .table-tools {
   align-items: stretch;
 }
@@ -455,6 +464,68 @@ tr:last-child td {
 .toast.show {
   transform: translateY(0);
   opacity: 1;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 32, 27, 0.45);
+}
+
+.modal-card {
+  width: min(780px, 100%);
+  max-height: min(760px, calc(100vh - 32px));
+  overflow: auto;
+  padding: 18px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.duplicate-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.duplicate-group {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7faf8;
+}
+
+.duplicate-choice {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.duplicate-choice input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 3px;
+}
+
+.duplicate-choice b {
+  display: block;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .hidden {
@@ -587,6 +658,14 @@ tr:last-child td {
 
   .score-display b {
     font-size: 1.75rem;
+  }
+
+  .modal-card {
+    padding: 12px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
   }
 
   .metric,

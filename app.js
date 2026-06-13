@@ -34,6 +34,7 @@ const elements = {
   studentAdminRoll: document.querySelector("#studentAdminRoll"),
   studentAdminName: document.querySelector("#studentAdminName"),
   studentAdminBatch: document.querySelector("#studentAdminBatch"),
+  studentExcelFile: document.querySelector("#studentExcelFile"),
   examForm: document.querySelector("#examForm"),
   examName: document.querySelector("#examName"),
   examDate: document.querySelector("#examDate"),
@@ -55,6 +56,10 @@ const elements = {
   examFilter: document.querySelector("#examFilter"),
   resultsBody: document.querySelector("#resultsBody"),
   modeBadge: document.querySelector("#modeBadge"),
+  duplicateModal: document.querySelector("#duplicateModal"),
+  duplicateForm: document.querySelector("#duplicateForm"),
+  cancelDuplicateBtn: document.querySelector("#cancelDuplicateBtn"),
+  confirmDuplicateBtn: document.querySelector("#confirmDuplicateBtn"),
   toast: document.querySelector("#toast")
 };
 
@@ -68,6 +73,8 @@ let results = [];
 let rankedResults = [];
 let editingStudentRoll = null;
 let editingExamId = null;
+let pendingBulkStudents = [];
+let pendingDuplicateGroups = [];
 
 boot();
 
@@ -174,6 +181,10 @@ function bindEvents() {
     await loadData();
     showToast("Student saved.");
   });
+
+  elements.studentExcelFile.addEventListener("change", handleStudentExcelUpload);
+  elements.cancelDuplicateBtn.addEventListener("click", closeDuplicateModal);
+  elements.confirmDuplicateBtn.addEventListener("click", importSelectedBulkStudents);
 
   elements.examForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -380,6 +391,160 @@ async function deleteStudent(roll, deleteRelatedResults = true) {
     local.results = local.results.filter((item) => item.roll !== roll);
   }
   setLocalData(local);
+}
+
+async function handleStudentExcelUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!window.XLSX) {
+    showToast("Excel parser could not load. Please check internet connection and try again.");
+    event.target.value = "";
+    return;
+  }
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = window.XLSX.read(buffer, { type: "array" });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = window.XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+    const imported = parseStudentRows(rows);
+    if (!imported.length) {
+      showToast("No valid student rows found. Use columns: Roll, Name, Batch.");
+      event.target.value = "";
+      return;
+    }
+    await prepareBulkStudentImport(imported);
+  } catch (error) {
+    showToast(`Excel upload failed: ${error.message}`);
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function parseStudentRows(rows) {
+  if (!rows.length) return [];
+  const header = rows[0].map((cell) => String(cell).trim().toLowerCase());
+  const hasHeader = header.some((cell) => ["roll", "roll number", "student roll", "name", "student name", "batch"].includes(cell));
+  const rollIndex = hasHeader ? findHeaderIndex(header, ["roll", "roll number", "student roll"]) : 0;
+  const nameIndex = hasHeader ? findHeaderIndex(header, ["name", "student name"]) : 1;
+  const batchIndex = hasHeader ? findHeaderIndex(header, ["batch", "class", "section"]) : 2;
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+
+  return dataRows
+    .map((row, index) => {
+      const roll = normalizeRoll(row[rollIndex]);
+      const name = String(row[nameIndex] || "").trim();
+      const batch = String(row[batchIndex] || "").trim();
+      if (!isValidRoll(roll) || !name || !batch || roll === ADMIN_TRIGGER_ROLL) return null;
+      return {
+        id: `upload-${index}-${roll}`,
+        roll,
+        name,
+        batch,
+        source: `Excel row ${hasHeader ? index + 2 : index + 1}`,
+        updatedAt: new Date().toISOString()
+      };
+    })
+    .filter(Boolean);
+}
+
+function findHeaderIndex(header, names) {
+  const index = header.findIndex((cell) => names.includes(cell));
+  return index === -1 ? 0 : index;
+}
+
+function normalizeRoll(value) {
+  const digits = String(value ?? "").trim().replace(/\.0$/, "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length <= 6 ? digits.padStart(6, "0") : digits;
+}
+
+async function prepareBulkStudentImport(importedStudents) {
+  const byRoll = new Map();
+  importedStudents.forEach((student) => {
+    if (!byRoll.has(student.roll)) byRoll.set(student.roll, []);
+    byRoll.get(student.roll).push(student);
+  });
+
+  const ready = [];
+  const duplicateGroups = [];
+
+  byRoll.forEach((incoming, roll) => {
+    const existing = findStudent(roll);
+    const candidates = [];
+    if (existing) {
+      candidates.push({ ...existing, id: `existing-${roll}`, source: "Current saved record" });
+    }
+    candidates.push(...incoming);
+
+    if (candidates.length > 1) {
+      duplicateGroups.push({ roll, candidates });
+    } else {
+      ready.push(stripBulkMeta(candidates[0]));
+    }
+  });
+
+  pendingBulkStudents = ready;
+  pendingDuplicateGroups = duplicateGroups;
+
+  if (duplicateGroups.length) {
+    renderDuplicateModal();
+    return;
+  }
+
+  await saveBulkStudents(ready);
+}
+
+function renderDuplicateModal() {
+  elements.duplicateForm.innerHTML = pendingDuplicateGroups.map((group) => `
+    <div class="duplicate-group">
+      <h3>Roll ${escapeHtml(group.roll)}</h3>
+      ${group.candidates.map((candidate, index) => `
+        <label class="duplicate-choice">
+          <input type="radio" name="roll-${escapeHtml(group.roll)}" value="${escapeHtml(candidate.id)}" ${index === group.candidates.length - 1 ? "checked" : ""} />
+          <span>
+            <b>${escapeHtml(candidate.name)}</b>
+            Roll: ${escapeHtml(candidate.roll)} | Batch: ${escapeHtml(candidate.batch)}<br />
+            Source: ${escapeHtml(candidate.source)}
+          </span>
+        </label>
+      `).join("")}
+    </div>
+  `).join("");
+  elements.duplicateModal.classList.remove("hidden");
+}
+
+async function importSelectedBulkStudents() {
+  const selected = [];
+  pendingDuplicateGroups.forEach((group) => {
+    const checked = elements.duplicateForm.querySelector(`input[name="roll-${CSS.escape(group.roll)}"]:checked`);
+    const candidate = group.candidates.find((item) => item.id === checked?.value);
+    if (candidate) selected.push(stripBulkMeta(candidate));
+  });
+  await saveBulkStudents([...pendingBulkStudents, ...selected]);
+  closeDuplicateModal();
+}
+
+async function saveBulkStudents(items) {
+  await Promise.all(items.map((student) => saveStudent(student)));
+  await loadData();
+  showToast(`${items.length} student${items.length === 1 ? "" : "s"} imported.`);
+}
+
+function stripBulkMeta(student) {
+  return {
+    roll: student.roll,
+    name: student.name,
+    batch: student.batch,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function closeDuplicateModal() {
+  elements.duplicateModal.classList.add("hidden");
+  elements.duplicateForm.innerHTML = "";
+  pendingBulkStudents = [];
+  pendingDuplicateGroups = [];
 }
 
 async function saveExam(exam) {
